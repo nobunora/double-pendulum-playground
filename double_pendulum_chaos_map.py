@@ -1,8 +1,10 @@
 import argparse
 import concurrent.futures as cf
+import html
 import math
 import multiprocessing as mp
 import tkinter as tk
+from pathlib import Path
 
 import numpy as np
 
@@ -289,6 +291,108 @@ def rgb_to_hex(color):
     return "#{:02x}{:02x}{:02x}".format(*color)
 
 
+def value_range_for_heatmap(values):
+    finite = values[np.isfinite(values)]
+    if finite.size == 0:
+        return 0.0, 1.0
+    vmax = max(1e-9, float(np.quantile(finite, 0.98)))
+    return 0.0, vmax
+
+
+def resolve_output_path(path_text):
+    path = Path(path_text).expanduser()
+    if not path.is_absolute():
+        path = Path(__file__).resolve().parent / path
+    return path
+
+
+def save_heatmap_svg(file_path, values, theta_min, theta_max, params_text, color_stops):
+    file_path = resolve_output_path(file_path)
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+
+    width = 1180
+    height = 860
+    left = 70
+    top = 110
+    right = width - 110
+    bottom = height - 70
+    bar_width = 28
+    plot_right = right - bar_width - 26
+    grid = values.shape[0]
+    vmin, vmax = value_range_for_heatmap(values)
+    cell_width = (plot_right - left) / max(grid, 1)
+    cell_height = (bottom - top) / max(grid, 1)
+
+    parts = [
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>",
+        f"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{width}\" height=\"{height}\" viewBox=\"0 0 {width} {height}\">",
+        "<rect width=\"100%\" height=\"100%\" fill=\"#e2e8f0\"/>",
+        "<style>",
+        "text{font-family:'Segoe UI','Yu Gothic UI',sans-serif}",
+        ".mono{font-family:Consolas,'Courier New',monospace}",
+        "</style>",
+        "<text x=\"24\" y=\"34\" font-size=\"18\" font-weight=\"700\" fill=\"#0f172a\">Chaos Map by Finite-Time Lyapunov Exponent</text>",
+        "<text x=\"24\" y=\"58\" font-size=\"11\" fill=\"#334155\">theta1-theta2 plane. Dark blue is regular-like, warm colors are more chaotic-like.</text>",
+        f"<text x=\"24\" y=\"80\" font-size=\"10\" fill=\"#475569\">{html.escape(params_text)}</text>",
+        f"<rect x=\"{left}\" y=\"{top}\" width=\"{plot_right - left}\" height=\"{bottom - top}\" fill=\"#f8fafc\" stroke=\"#cbd5e1\"/>",
+    ]
+
+    for row in range(grid):
+        for col in range(grid):
+            value = values[row, col]
+            if not np.isfinite(value):
+                continue
+            normalized = 0.0 if vmax <= vmin else (value - vmin) / (vmax - vmin)
+            color = rgb_to_hex(interpolate_color(color_stops, normalized))
+            x0 = left + col * cell_width
+            y0 = top + row * cell_height
+            parts.append(
+                f"<rect x=\"{x0:.3f}\" y=\"{y0:.3f}\" width=\"{cell_width + 1:.3f}\" height=\"{cell_height + 1:.3f}\" fill=\"{color}\" stroke=\"{color}\"/>"
+            )
+
+    for angle_deg, label in [(-180, "-180"), (-90, "-90"), (0, "0"), (90, "90"), (180, "180")]:
+        x = left + (angle_deg - theta_min) / (theta_max - theta_min) * (plot_right - left)
+        y = top + (theta_max - angle_deg) / (theta_max - theta_min) * (bottom - top)
+        parts.append(f"<line x1=\"{x:.3f}\" y1=\"{bottom}\" x2=\"{x:.3f}\" y2=\"{bottom + 6}\" stroke=\"#475569\"/>")
+        parts.append(f"<text x=\"{x:.3f}\" y=\"{bottom + 22}\" text-anchor=\"middle\" class=\"mono\" font-size=\"10\" fill=\"#475569\">{label}</text>")
+        parts.append(f"<line x1=\"{left - 6}\" y1=\"{y:.3f}\" x2=\"{left}\" y2=\"{y:.3f}\" stroke=\"#475569\"/>")
+        parts.append(f"<text x=\"{left - 10}\" y=\"{y + 3:.3f}\" text-anchor=\"end\" class=\"mono\" font-size=\"10\" fill=\"#475569\">{label}</text>")
+
+    parts.extend(
+        [
+            f"<text x=\"{(left + plot_right) / 2.0:.3f}\" y=\"{bottom + 42}\" text-anchor=\"middle\" font-size=\"10\" font-weight=\"700\" fill=\"#334155\">theta1 (deg)</text>",
+            f"<text x=\"{left - 42}\" y=\"{(top + bottom) / 2.0:.3f}\" text-anchor=\"middle\" transform=\"rotate(-90 {left - 42} {(top + bottom) / 2.0:.3f})\" font-size=\"10\" font-weight=\"700\" fill=\"#334155\">theta2 (deg)</text>",
+        ]
+    )
+
+    bar_x0 = plot_right + 28
+    bar_y0 = top
+    bar_y1 = bottom
+    steps = 120
+    for index in range(steps):
+        t0 = index / steps
+        t1 = (index + 1) / steps
+        color = rgb_to_hex(interpolate_color(color_stops, 1.0 - t0))
+        y0 = bar_y0 + t0 * (bar_y1 - bar_y0)
+        y1 = bar_y0 + t1 * (bar_y1 - bar_y0)
+        parts.append(
+            f"<rect x=\"{bar_x0}\" y=\"{y0:.3f}\" width=\"{bar_width}\" height=\"{y1 - y0:.3f}\" fill=\"{color}\" stroke=\"{color}\"/>"
+        )
+
+    parts.extend(
+        [
+            f"<rect x=\"{bar_x0}\" y=\"{bar_y0}\" width=\"{bar_width}\" height=\"{bar_y1 - bar_y0}\" fill=\"none\" stroke=\"#334155\"/>",
+            f"<text x=\"{bar_x0 + bar_width / 2.0:.3f}\" y=\"{bar_y0 - 18}\" text-anchor=\"middle\" font-size=\"10\" font-weight=\"700\" fill=\"#334155\">FTLE</text>",
+            f"<text x=\"{bar_x0 + bar_width + 12}\" y=\"{bar_y0 + 4}\" font-size=\"10\" class=\"mono\" fill=\"#475569\">{vmax:.3f}</text>",
+            f"<text x=\"{bar_x0 + bar_width + 12}\" y=\"{bar_y1 + 4}\" font-size=\"10\" class=\"mono\" fill=\"#475569\">{vmin:.3f}</text>",
+            "</svg>",
+        ]
+    )
+
+    file_path.write_text("\n".join(parts), encoding="utf-8")
+    return file_path
+
+
 def build_cell_tasks(theta_min, theta_max, grid, cells_per_task):
     del theta_min, theta_max
     total_cells = grid * grid
@@ -343,6 +447,7 @@ def show_chaos_map(duration, dt, auto_close_ms=0):
         "grid": tk.StringVar(value="60"),
         "duration": tk.StringVar(value=f"{duration:.3g}"),
         "dt": tk.StringVar(value=f"{dt:.3g}"),
+        "save_svg": tk.StringVar(value="docs/images/chaos_heatmap_sample.svg"),
     }
 
     state = {
@@ -386,6 +491,7 @@ def show_chaos_map(duration, dt, auto_close_ms=0):
     make_labeled_entry(controls, "grid", vars_map["grid"], width=6)
     make_labeled_entry(controls, "duration", vars_map["duration"], width=7)
     make_labeled_entry(controls, "dt", vars_map["dt"], width=7)
+    make_labeled_entry(controls, "save_svg", vars_map["save_svg"], width=28)
 
     status_var = tk.StringVar(value="Ready")
     status_label = tk.Label(
@@ -433,11 +539,37 @@ def show_chaos_map(duration, dt, auto_close_ms=0):
         return value
 
     def value_range():
-        finite = state["values"][np.isfinite(state["values"])]
-        if finite.size == 0:
-            return 0.0, 1.0
-        vmax = max(1e-9, float(np.quantile(finite, 0.98)))
-        return 0.0, vmax
+        return value_range_for_heatmap(state["values"])
+
+    def save_current_svg(show_status=True):
+        target = vars_map["save_svg"].get().strip()
+        if not target:
+            if show_status:
+                status_var.set("save_svg is empty")
+            return None
+
+        if state["grid"] <= 0 or not state["values"].size or not np.isfinite(state["values"]).any():
+            if show_status:
+                status_var.set("No heatmap data to save yet")
+            return None
+
+        try:
+            saved_path = save_heatmap_svg(
+                file_path=target,
+                values=state["values"],
+                theta_min=state["theta_min"],
+                theta_max=state["theta_max"],
+                params_text=state["params_text"],
+                color_stops=color_stops,
+            )
+        except Exception as exc:
+            if show_status:
+                status_var.set(f"Save failed: {exc}")
+            return None
+
+        if show_status:
+            status_var.set(f"Saved SVG: {saved_path}")
+        return saved_path
 
     def redraw(_event=None):
         canvas.delete("all")
@@ -581,9 +713,13 @@ def show_chaos_map(duration, dt, auto_close_ms=0):
         if state["completed_cells"] >= total_cells:
             state["running"] = False
             shutdown_executor()
-            status_var.set("Done")
             compute_button.config(state="normal")
             stop_button.config(state="disabled")
+            saved_path = save_current_svg(show_status=False)
+            if saved_path is not None:
+                status_var.set(f"Done and saved: {saved_path}")
+            else:
+                status_var.set("Done")
             redraw()
             return
 
@@ -682,6 +818,20 @@ def show_chaos_map(duration, dt, auto_close_ms=0):
         state="disabled",
     )
     stop_button.pack(side="left", padx=(0, 8))
+
+    save_button = tk.Button(
+        controls,
+        text="Save Current",
+        command=save_current_svg,
+        bg="#0f766e",
+        fg="white",
+        activebackground="#115e59",
+        activeforeground="white",
+        font=("Yu Gothic UI", 10, "bold"),
+        padx=14,
+        pady=4,
+    )
+    save_button.pack(side="left", padx=(0, 8))
 
     root.protocol("WM_DELETE_WINDOW", close_window)
     root.bind("<Configure>", redraw)
