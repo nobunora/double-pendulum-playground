@@ -2,6 +2,11 @@
 
 Interactive Python experiments for exploring double pendulum dynamics in 2D, 3D, Poincare sections, and FTLE-based chaos maps.
 
+## Documentation
+
+- English/Japanese guide: [docs/index.md](docs/index.md)
+- Sample images: [docs/images](docs/images)
+
 ## Included Scripts
 
 - `double_pendulum.py`
