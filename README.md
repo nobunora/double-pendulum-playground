@@ -126,3 +126,7 @@ Controls:
 - The chaos heatmap uses a finite-time Lyapunov exponent, so results depend on `duration`, `dt`, and the chosen perturbation model.
 - The 3D viewer is a constrained free-direction pendulum visualization, not a rigid-body physics engine.
 - All GUI tools use Tkinter, so they should run on a plain Python installation on Windows without extra GUI frameworks.
+
+## License
+
+This project is released under the MIT License. See `LICENSE` for details.
