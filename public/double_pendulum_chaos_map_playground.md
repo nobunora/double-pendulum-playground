@@ -34,6 +34,10 @@ ignorePublish: false
 
 という流れができるようになっています。
 
+リポジトリはこちらです。
+
+- GitHub: https://github.com/nobunora/double-pendulum-playground
+
 # 作ったもの
 
 今回追加した主な機能はこんな感じです。
@@ -179,6 +183,16 @@ FTLE は「近い初期条件同士が、有限時間のあいだにどれくら
 3. そこから長さや重さを変える
 
 という流れでそのまま遊べます。
+
+# サンプル動画
+
+記事からそのまま見に行けるように、代表的なサンプル動画も置いてあります。
+
+- [長時間サンプル動画を開く](https://github.com/nobunora/double-pendulum-playground/blob/main/docs/double_pendulum_t1-112p563_t2-85p5504_o1-0_o2-0_m1-1_m2-1_l1-1_l2-1_dur-200_dt-0p02.mp4)
+- [別条件のサンプル動画を開く](https://github.com/nobunora/double-pendulum-playground/blob/main/docs/double_pendulum_t1-145p565_t2-96p0076_o1-0_o2-0_m1-1_m2-1_l1-1_l2-1_dur-20_dt-0p02.mp4)
+- [20秒サンプル動画を開く](https://github.com/nobunora/double-pendulum-playground/blob/main/docs/double_pendulum_t1-148p25_t2-m177p25_o1-0_o2-0_m1-1_m2-1_l1-1_l2-1_dur-20_dt-0p02.mp4)
+
+GitHub 上のファイルページから、そのまま再生やダウンロードができます。
 
 # Pythonコードの見どころ
 
@@ -384,6 +398,13 @@ python double_pendulum.py
 二重振り子は、数式として見ても面白いですが、カオスマップから初期値を拾って実際の運動を見ると、かなり直感的に楽しめます。
 
 今後は、代表サンプルの整理や、記事用素材の絞り込み、比較しやすいプリセット追加などもやっていきたいです。
+
+コード全体を見たい場合は、リポジトリ本体からたどるのが一番分かりやすいです。
+
+- GitHub リポジトリ: https://github.com/nobunora/double-pendulum-playground
+- カオスマップ本体: https://github.com/nobunora/double-pendulum-playground/blob/main/double_pendulum_chaos_map.py
+- 2D シミュレータ本体: https://github.com/nobunora/double-pendulum-playground/blob/main/double_pendulum.py
+- 任意角度ピッカー: https://github.com/nobunora/double-pendulum-playground/blob/main/double_pendulum_theta_picker.py
 
 # 付録: FTLE とは何か
 
