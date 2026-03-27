@@ -35,7 +35,7 @@ jobs:
         run: npm install
 
       - name: Publish articles
-        run: npx qiita publish --all
+        run: npx qiita publish --all --force
         env:
           QIITA_TOKEN: ${{ secrets.QIITA_TOKEN }}
 
