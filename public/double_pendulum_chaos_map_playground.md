@@ -282,12 +282,26 @@ python double_pendulum.py
 - 2D シミュレータ本体: https://github.com/nobunora/double-pendulum-playground/blob/main/double_pendulum.py
 - 任意角度ピッカー: https://github.com/nobunora/double-pendulum-playground/blob/main/double_pendulum_theta_picker.py
 
-# 11. 参考文献
+# 11. 参考にしたページ・近い事例
 
-- Troy Shinbrot, Celso Grebogi, Jack Wisdom, James A. Yorke, “Chaos in a Double Pendulum,” *American Journal of Physics* 60(6), 491-499, 1992. DOI: https://doi.org/10.1119/1.16860
-- M. Stachowiak, T. Okada, “A numerical analysis of chaos in the double pendulum,” *Chaos, Solitons & Fractals* 29(2), 417-422, 2006. DOI: https://doi.org/10.1016/j.chaos.2005.08.032
-- Javier Jimenez Lopez, V. J. Garcia-Garrido, “Chaos and Regularity in the Double Pendulum with Lagrangian Descriptors,” arXiv, 2024. https://arxiv.org/abs/2403.07000
-- Shawn C. Shadden, Francois Lekien, Jerrold E. Marsden, “Definition and properties of Lagrangian coherent structures from finite-time Lyapunov exponents in two-dimensional aperiodic flows,” *Physica D* 212, 271-304, 2005. PDF: https://www.cds.caltech.edu/~marsden/bib/2005/19-ShLeMa2005/ShLeMa2005.pdf
+- 工学院大学 金丸研究室「二重振り子」
+  - https://brain.cc.kogakuin.ac.jp/~kanamaru/Chaos/DP/
+  - 二重振り子がカオスの例としてどう見えるかを、かなり素直に説明していて分かりやすいページです。
+- 千葉大学サイエンスプロムナード「二重振り子」
+  - https://sci-pro.faculty.gs.chiba-u.jp/home/exhibition/huriko
+  - 初期状態を少し変えるだけで動きが大きく変わる、という体験寄りの説明が近いです。
+- NGKサイエンスサイト「〖二重振り子〗カオスな動きの体操人形」
+  - https://site.ngk.co.jp/lab/no191/
+  - 二重振り子を工作として体験できるページで、まずカオスを眺めて楽しむという方向が近いです。
+- 「地惑、わくわく。」2025 シミュレーション班「二重振り子シミュレーション（お試し版）」
+  - https://chiwaku-simulation-2025.vercel.app/pendulum
+  - 条件をいじりながら動きを見るという点で、今回のシミュレータ側の方向にかなり近いです。
+- 京都府立桃山高校 SSH 成果集
+  - https://www.kyoto-be.ne.jp/momoyama-hs/mt/ssh/pdf/%E4%BB%A4%E5%92%8C%EF%BC%92%E5%B9%B4%E5%BA%A6%20%E8%87%AA%E7%84%B6%E7%A7%91%E5%AD%A6%E7%A7%91%E3%80%8CGS%E8%AA%B2%E9%A1%8C%E7%A0%94%E7%A9%B6%E3%80%8D%E6%88%90%E6%9E%9C%E9%9B%86.pdf
+  - 二重振り子の角度を変えながらシミュレーションと実機を比べていて、条件を振って違いを見る発想が近いです。
+- 「カオス時系列解析の基礎 with R」
+  - https://saltcooky.hatenablog.com/entry/2023/10/30/222253
+  - FTLEそのものではないですが、最大リャプノフ指数の考え方を日本語で追うのに分かりやすいページです。
 
 # 付録. FTLE とは何か
 
