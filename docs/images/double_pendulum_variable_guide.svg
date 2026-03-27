@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="620" viewBox="0 0 980 620">
+  <rect width="980" height="620" fill="#f8fafc"/>
+  <rect x="28" y="28" width="924" height="564" rx="20" fill="#e2e8f0" stroke="#cbd5e1"/>
+
+  <text x="54" y="76" font-family="Segoe UI, Meiryo, sans-serif" font-size="30" font-weight="700" fill="#0f172a">
+    Double Pendulum Variables
+  </text>
+  <text x="54" y="108" font-family="Segoe UI, Meiryo, sans-serif" font-size="17" fill="#334155">
+    theta1 / theta2 are initial angles, omega1 / omega2 are angular velocities, l1 / l2 are rod lengths.
+  </text>
+
+  <circle cx="290" cy="170" r="8" fill="#111827"/>
+  <line x1="290" y1="170" x2="430" y2="330" stroke="#2563eb" stroke-width="6" stroke-linecap="round"/>
+  <line x1="430" y1="330" x2="580" y2="470" stroke="#ea580c" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="430" cy="330" r="18" fill="#f97316"/>
+  <circle cx="580" cy="470" r="20" fill="#dc2626"/>
+
+  <line x1="290" y1="170" x2="290" y2="360" stroke="#94a3b8" stroke-width="3" stroke-dasharray="8 8"/>
+  <line x1="430" y1="330" x2="430" y2="520" stroke="#94a3b8" stroke-width="3" stroke-dasharray="8 8"/>
+
+  <path d="M290 232 A62 62 0 0 0 340 215" fill="none" stroke="#16a34a" stroke-width="4"/>
+  <polygon points="338,205 350,217 333,220" fill="#16a34a"/>
+  <text x="330" y="200" font-family="Consolas, monospace" font-size="24" fill="#16a34a">theta1</text>
+
+  <path d="M430 392 A62 62 0 0 0 478 374" fill="none" stroke="#7c3aed" stroke-width="4"/>
+  <polygon points="475,364 488,376 471,379" fill="#7c3aed"/>
+  <text x="470" y="358" font-family="Consolas, monospace" font-size="24" fill="#7c3aed">theta2</text>
+
+  <text x="338" y="262" font-family="Consolas, monospace" font-size="24" fill="#1d4ed8">l1</text>
+  <text x="505" y="412" font-family="Consolas, monospace" font-size="24" fill="#c2410c">l2</text>
+  <text x="452" y="324" font-family="Consolas, monospace" font-size="22" fill="#0f172a">m1</text>
+  <text x="603" y="464" font-family="Consolas, monospace" font-size="22" fill="#0f172a">m2</text>
+
+  <path d="M430 300 C450 270 458 248 458 224" fill="none" stroke="#0284c7" stroke-width="4"/>
+  <polygon points="449,226 459,208 467,228" fill="#0284c7"/>
+  <text x="470" y="226" font-family="Consolas, monospace" font-size="22" fill="#0284c7">omega1</text>
+
+  <path d="M580 438 C606 410 620 388 624 356" fill="none" stroke="#be185d" stroke-width="4"/>
+  <polygon points="615,359 626,339 633,360" fill="#be185d"/>
+  <text x="638" y="356" font-family="Consolas, monospace" font-size="22" fill="#be185d">omega2</text>
+
+  <line x1="710" y1="120" x2="710" y2="220" stroke="#475569" stroke-width="5"/>
+  <polygon points="710,240 698,214 722,214" fill="#475569"/>
+  <text x="734" y="178" font-family="Consolas, monospace" font-size="28" fill="#475569">g</text>
+
+  <rect x="650" y="286" width="256" height="244" rx="18" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="674" y="326" font-family="Segoe UI, Meiryo, sans-serif" font-size="24" font-weight="700" fill="#0f172a">
+    Simulation variables
+  </text>
+  <text x="674" y="362" font-family="Consolas, monospace" font-size="21" fill="#0f172a">theta1, theta2 : initial angles [deg]</text>
+  <text x="674" y="394" font-family="Consolas, monospace" font-size="21" fill="#0f172a">omega1, omega2 : angular velocity [rad/s]</text>
+  <text x="674" y="426" font-family="Consolas, monospace" font-size="21" fill="#0f172a">l1, l2         : rod lengths</text>
+  <text x="674" y="458" font-family="Consolas, monospace" font-size="21" fill="#0f172a">m1, m2         : masses</text>
+  <text x="674" y="490" font-family="Consolas, monospace" font-size="21" fill="#0f172a">g              : gravity</text>
+  <text x="674" y="522" font-family="Consolas, monospace" font-size="21" fill="#0f172a">dt, duration   : integration step / total time</text>
+
+  <text x="54" y="562" font-family="Segoe UI, Meiryo, sans-serif" font-size="16" fill="#475569">
+    In this implementation, angle 0 deg points straight downward. Positive angles rotate counterclockwise in the math model.
+  </text>
+</svg>
