@@ -186,13 +186,39 @@ FTLE は「近い初期条件同士が、有限時間のあいだにどれくら
 
 # サンプル動画
 
-記事からそのまま見に行けるように、代表的なサンプル動画も置いてあります。
+GitHub のファイル画面は大きい動画をうまくプレビューできないことがあるので、記事からは
 
-- [長時間サンプル動画を開く](https://github.com/nobunora/double-pendulum-playground/blob/main/docs/double_pendulum_t1-112p563_t2-85p5504_o1-0_o2-0_m1-1_m2-1_l1-1_l2-1_dur-200_dt-0p02.mp4)
-- [別条件のサンプル動画を開く](https://github.com/nobunora/double-pendulum-playground/blob/main/docs/double_pendulum_t1-145p565_t2-96p0076_o1-0_o2-0_m1-1_m2-1_l1-1_l2-1_dur-20_dt-0p02.mp4)
-- [20秒サンプル動画を開く](https://github.com/nobunora/double-pendulum-playground/blob/main/docs/double_pendulum_t1-148p25_t2-m177p25_o1-0_o2-0_m1-1_m2-1_l1-1_l2-1_dur-20_dt-0p02.mp4)
+- 軽量な preview 動画
+- フルサイズの元動画
+- GitHub 上のソース置き場
 
-GitHub 上のファイルページから、そのまま再生やダウンロードができます。
+へ分けて飛べるようにしてあります。
+
+## 長時間サンプル
+
+![長時間サンプルのサムネイル](https://raw.githubusercontent.com/nobunora/double-pendulum-playground/main/docs/images/video_previews/double_pendulum_t1-112p563_t2-85p5504_o1-0_o2-0_m1-1_m2-1_l1-1_l2-1_dur-200_dt-0p02.png)
+
+- [軽量 preview を開く](https://raw.githubusercontent.com/nobunora/double-pendulum-playground/main/docs/previews/double_pendulum_t1-112p563_t2-85p5504_o1-0_o2-0_m1-1_m2-1_l1-1_l2-1_dur-200_dt-0p02_preview.mp4)
+- [フル動画を開く](https://raw.githubusercontent.com/nobunora/double-pendulum-playground/main/docs/double_pendulum_t1-112p563_t2-85p5504_o1-0_o2-0_m1-1_m2-1_l1-1_l2-1_dur-200_dt-0p02.mp4)
+- [GitHub 上の元ファイルを見る](https://github.com/nobunora/double-pendulum-playground/blob/main/docs/double_pendulum_t1-112p563_t2-85p5504_o1-0_o2-0_m1-1_m2-1_l1-1_l2-1_dur-200_dt-0p02.mp4)
+
+## カオスが強い別条件
+
+![別条件サンプルのサムネイル](https://raw.githubusercontent.com/nobunora/double-pendulum-playground/main/docs/images/video_previews/double_pendulum_t1-145p565_t2-96p0076_o1-0_o2-0_m1-1_m2-1_l1-1_l2-1_dur-20_dt-0p02.png)
+
+- [軽量 preview を開く](https://raw.githubusercontent.com/nobunora/double-pendulum-playground/main/docs/previews/double_pendulum_t1-145p565_t2-96p0076_o1-0_o2-0_m1-1_m2-1_l1-1_l2-1_dur-20_dt-0p02_preview.mp4)
+- [フル動画を開く](https://raw.githubusercontent.com/nobunora/double-pendulum-playground/main/docs/double_pendulum_t1-145p565_t2-96p0076_o1-0_o2-0_m1-1_m2-1_l1-1_l2-1_dur-20_dt-0p02.mp4)
+- [GitHub 上の元ファイルを見る](https://github.com/nobunora/double-pendulum-playground/blob/main/docs/double_pendulum_t1-145p565_t2-96p0076_o1-0_o2-0_m1-1_m2-1_l1-1_l2-1_dur-20_dt-0p02.mp4)
+
+## 20秒の見やすいサンプル
+
+![20秒サンプルのサムネイル](https://raw.githubusercontent.com/nobunora/double-pendulum-playground/main/docs/images/video_previews/double_pendulum_t1-148p25_t2-m177p25_o1-0_o2-0_m1-1_m2-1_l1-1_l2-1_dur-20_dt-0p02.png)
+
+- [軽量 preview を開く](https://raw.githubusercontent.com/nobunora/double-pendulum-playground/main/docs/previews/double_pendulum_t1-148p25_t2-m177p25_o1-0_o2-0_m1-1_m2-1_l1-1_l2-1_dur-20_dt-0p02_preview.mp4)
+- [フル動画を開く](https://raw.githubusercontent.com/nobunora/double-pendulum-playground/main/docs/double_pendulum_t1-148p25_t2-m177p25_o1-0_o2-0_m1-1_m2-1_l1-1_l2-1_dur-20_dt-0p02.mp4)
+- [GitHub 上の元ファイルを見る](https://github.com/nobunora/double-pendulum-playground/blob/main/docs/double_pendulum_t1-148p25_t2-m177p25_o1-0_o2-0_m1-1_m2-1_l1-1_l2-1_dur-20_dt-0p02.mp4)
+
+動画全体を一覧したい場合は、[docs ディレクトリ](https://github.com/nobunora/double-pendulum-playground/tree/main/docs) からまとめてたどれます。
 
 # Pythonコードの見どころ
 
