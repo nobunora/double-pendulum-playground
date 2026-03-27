@@ -30,7 +30,6 @@ jobs:
         uses: actions/setup-node@v5
         with:
           node-version: "24"
-          cache: "npm"
 
       - name: Install Qiita CLI
         run: npm install
