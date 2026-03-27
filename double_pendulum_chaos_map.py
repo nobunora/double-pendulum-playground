@@ -1766,8 +1766,9 @@ def show_chaos_map(duration, dt, auto_close_ms=0, initial_grid=180, diagnostic_l
             state["next_cell_index"] = stop
             cell_range = (start, stop)
             future = state["executor"].submit(compute_cell_batch, cell_range, params)
+            completed_queue = state["completed_future_queue"]
             future.add_done_callback(
-                lambda done_future, done_generation=generation: state["completed_future_queue"].put((done_generation, done_future))
+                lambda done_future, done_generation=generation, done_queue=completed_queue: done_queue.put((done_generation, done_future))
             )
             state["futures"][future] = {
                 "batch_size": stop - start,
