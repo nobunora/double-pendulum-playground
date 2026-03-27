@@ -1,5 +1,6 @@
 import argparse
 import concurrent.futures as cf
+import csv
 import math
 import multiprocessing as mp
 import os
@@ -26,9 +27,10 @@ DEFAULT_POLL_INTERVAL_MS = 4
 MAX_WINDOWS_WORKERS = 61
 AUTO_MIN_CELLS_PER_TASK = 64
 AUTO_MAX_CELLS_PER_TASK = 8192
-AUTO_TARGET_TASK_SECONDS = 0.75
-AUTO_MIN_TASK_SECONDS = 0.35
-AUTO_MAX_TASK_SECONDS = 1.60
+AUTO_TARGET_TASK_SECONDS = 1.20
+AUTO_MIN_TASK_SECONDS = 0.80
+AUTO_MAX_TASK_SECONDS = 2.80
+AUTO_MIN_SUSTAINED_CELLS_PER_TASK = 256
 AUTO_MEMORY_PER_WORKER_BYTES = 512 * 1024 * 1024
 MAX_STATE_ABS_VALUE = 1.0e6
 PERTURBATION_DIRECTION = np.array([1.0, 0.0, 0.35, 0.0], dtype=np.float64)
@@ -63,6 +65,19 @@ def clamp(value, lower, upper):
 def round_cells_per_task(value):
     rounded = int(math.ceil(max(1.0, float(value)) / 64.0) * 64)
     return clamp(rounded, AUTO_MIN_CELLS_PER_TASK, AUTO_MAX_CELLS_PER_TASK)
+
+
+def sustained_cells_per_task_floor(baseline_cells_per_task):
+    baseline_cells_per_task = round_cells_per_task(baseline_cells_per_task)
+    if baseline_cells_per_task <= AUTO_MIN_SUSTAINED_CELLS_PER_TASK:
+        return baseline_cells_per_task
+    return min(
+        baseline_cells_per_task,
+        max(
+            AUTO_MIN_SUSTAINED_CELLS_PER_TASK,
+            round_cells_per_task(baseline_cells_per_task * 0.5),
+        ),
+    )
 
 
 def get_system_resources():
@@ -854,7 +869,7 @@ def compute_cell_batch(cell_range, params):
     return rows, cols, values, worker_seconds
 
 
-def show_chaos_map(duration, dt, auto_close_ms=0):
+def show_chaos_map(duration, dt, auto_close_ms=0, initial_grid=180, diagnostic_log_path=None, close_on_finish_ms=0):
     root = tk.Tk()
     root.title("Double Pendulum Chaos Map")
     root.geometry("1180x860")
@@ -876,7 +891,7 @@ def show_chaos_map(duration, dt, auto_close_ms=0):
         "l2": tk.StringVar(value="1.0"),
         "omega1": tk.StringVar(value="0.0"),
         "omega2": tk.StringVar(value="0.0"),
-        "grid": tk.StringVar(value="180"),
+        "grid": tk.StringVar(value=str(int(initial_grid))),
         "duration": tk.StringVar(value=f"{duration:.3g}"),
         "dt": tk.StringVar(value=f"{dt:.3g}"),
         "area_start_theta1": tk.StringVar(value=""),
@@ -921,6 +936,8 @@ def show_chaos_map(duration, dt, auto_close_ms=0):
         "save_filename": "chaos_heatmap.png",
         "worker_count": DEFAULT_WORKER_COUNT,
         "cells_per_task": DEFAULT_CELLS_PER_TASK,
+        "baseline_cells_per_task": DEFAULT_CELLS_PER_TASK,
+        "minimum_cells_per_task": DEFAULT_CELLS_PER_TASK,
         "max_in_flight": DEFAULT_MAX_IN_FLIGHT,
         "poll_interval_ms": DEFAULT_POLL_INTERVAL_MS,
         "task_runtime_ema": None,
@@ -928,6 +945,13 @@ def show_chaos_map(duration, dt, auto_close_ms=0):
         "heatmap_photo": None,
         "colorbar_photo": None,
         "last_redraw_at": 0.0,
+        "diagnostic_writer": None,
+        "diagnostic_file": None,
+        "diagnostic_log_path": resolve_output_path(diagnostic_log_path) if diagnostic_log_path else None,
+        "diagnostic_last_time": None,
+        "diagnostic_last_completed_cells": 0,
+        "diagnostic_last_quartile": -1,
+        "close_on_finish_ms": max(0, int(close_on_finish_ms)),
     }
 
     color_stops = [
@@ -996,6 +1020,120 @@ def show_chaos_map(duration, dt, auto_close_ms=0):
 
     actions_frame.bind("<Configure>", layout_action_buttons)
 
+    def close_diagnostic_log():
+        diagnostic_file = state.get("diagnostic_file")
+        if diagnostic_file is not None:
+            diagnostic_file.close()
+            state["diagnostic_file"] = None
+            state["diagnostic_writer"] = None
+
+    def reset_diagnostic_log():
+        close_diagnostic_log()
+        diagnostic_path = state["diagnostic_log_path"]
+        if diagnostic_path is None:
+            state["diagnostic_last_time"] = None
+            state["diagnostic_last_completed_cells"] = 0
+            state["diagnostic_last_quartile"] = -1
+            return
+
+        diagnostic_path.parent.mkdir(parents=True, exist_ok=True)
+        diagnostic_file = diagnostic_path.open("w", newline="", encoding="utf-8")
+        diagnostic_writer = csv.DictWriter(
+            diagnostic_file,
+            fieldnames=[
+                "elapsed_seconds",
+                "progress_fraction",
+                "completed_cells",
+                "window_cells",
+                "window_cells_per_second",
+                "overall_cells_per_second",
+                "finished_batches",
+                "finished_batch_cells",
+                "avg_worker_seconds",
+                "task_runtime_ema",
+                "cells_per_task",
+                "max_in_flight",
+                "active_futures",
+                "next_cell_index",
+                "drain_seconds",
+                "result_seconds",
+                "extrema_seconds",
+                "retune_seconds",
+                "redraw_seconds",
+            ],
+        )
+        diagnostic_writer.writeheader()
+        diagnostic_file.flush()
+        state["diagnostic_file"] = diagnostic_file
+        state["diagnostic_writer"] = diagnostic_writer
+        state["diagnostic_last_time"] = state["run_started_at"]
+        state["diagnostic_last_completed_cells"] = 0
+        state["diagnostic_last_quartile"] = -1
+
+    def maybe_log_diagnostic(
+        *,
+        finished_batches,
+        finished_batch_cells,
+        finished_worker_seconds,
+        drain_seconds,
+        result_seconds,
+        extrema_seconds,
+        retune_seconds,
+        redraw_seconds,
+        force=False,
+    ):
+        diagnostic_writer = state.get("diagnostic_writer")
+        diagnostic_file = state.get("diagnostic_file")
+        if diagnostic_writer is None or diagnostic_file is None:
+            return
+
+        now = time.perf_counter()
+        total_cells = max(1, state["total_cells"])
+        quartile = int(4 * state["completed_cells"] / total_cells)
+        should_log = force
+        if state["diagnostic_last_time"] is None:
+            should_log = True
+        elif now - state["diagnostic_last_time"] >= 1.0:
+            should_log = True
+        elif quartile != state["diagnostic_last_quartile"]:
+            should_log = True
+
+        if not should_log:
+            return
+
+        last_time = state["diagnostic_last_time"] or now
+        window_seconds = max(now - last_time, 1e-6)
+        window_cells = state["completed_cells"] - state["diagnostic_last_completed_cells"]
+        elapsed = max(state["elapsed_seconds"], 1e-6)
+        avg_worker_seconds = finished_worker_seconds / finished_batches if finished_batches > 0 else 0.0
+        diagnostic_writer.writerow(
+            {
+                "elapsed_seconds": f"{state['elapsed_seconds']:.6f}",
+                "progress_fraction": f"{state['completed_cells'] / total_cells:.6f}",
+                "completed_cells": int(state["completed_cells"]),
+                "window_cells": int(window_cells),
+                "window_cells_per_second": f"{window_cells / window_seconds:.3f}",
+                "overall_cells_per_second": f"{state['completed_cells'] / elapsed:.3f}",
+                "finished_batches": int(finished_batches),
+                "finished_batch_cells": int(finished_batch_cells),
+                "avg_worker_seconds": f"{avg_worker_seconds:.6f}",
+                "task_runtime_ema": f"{(state['task_runtime_ema'] or 0.0):.6f}",
+                "cells_per_task": int(state["cells_per_task"]),
+                "max_in_flight": int(state["max_in_flight"]),
+                "active_futures": int(len(state["futures"])),
+                "next_cell_index": int(state["next_cell_index"]),
+                "drain_seconds": f"{drain_seconds:.6f}",
+                "result_seconds": f"{result_seconds:.6f}",
+                "extrema_seconds": f"{extrema_seconds:.6f}",
+                "retune_seconds": f"{retune_seconds:.6f}",
+                "redraw_seconds": f"{redraw_seconds:.6f}",
+            }
+        )
+        diagnostic_file.flush()
+        state["diagnostic_last_time"] = now
+        state["diagnostic_last_completed_cells"] = state["completed_cells"]
+        state["diagnostic_last_quartile"] = quartile
+
     def shutdown_executor():
         if state["job"] is not None:
             root.after_cancel(state["job"])
@@ -1009,6 +1147,7 @@ def show_chaos_map(duration, dt, auto_close_ms=0):
         state["executor"] = None
         if executor is not None:
             executor.shutdown(wait=False, cancel_futures=True)
+        close_diagnostic_log()
 
     def close_window():
         state["running"] = False
@@ -1402,7 +1541,7 @@ def show_chaos_map(duration, dt, auto_close_ms=0):
             f"m1={params['m1']:.3g}, m2={params['m2']:.3g}, l1={params['l1']:.3g}, l2={params['l2']:.3g}, "
             f"omega1={params['omega1']:.3g}, omega2={params['omega2']:.3g}, duration={params['duration']:.3g}, dt={params['dt']:.3g}, "
             f"cpu={physical}P/{logical}L, mem={memory_text}, workers={state['worker_count']}, batch={state['cells_per_task']}, "
-            f"inflight={state['max_in_flight']}, poll={state['poll_interval_ms']}ms, "
+            f"batch-min={state['minimum_cells_per_task']}, inflight={state['max_in_flight']}, poll={state['poll_interval_ms']}ms, "
             f"task~{(state['task_runtime_ema'] or 0.0):.2f}s"
         )
 
@@ -1415,6 +1554,8 @@ def show_chaos_map(duration, dt, auto_close_ms=0):
         desired_cells = state["cells_per_task"]
         if task_seconds < AUTO_MIN_TASK_SECONDS or task_seconds > AUTO_MAX_TASK_SECONDS:
             desired_cells = round_cells_per_task(state["cells_per_task"] * AUTO_TARGET_TASK_SECONDS / max(task_seconds, 1e-6))
+        desired_cells = max(state["minimum_cells_per_task"], desired_cells)
+        desired_cells = min(AUTO_MAX_CELLS_PER_TASK, desired_cells)
 
         if desired_cells != state["cells_per_task"]:
             state["cells_per_task"] = desired_cells
@@ -1640,6 +1781,7 @@ def show_chaos_map(duration, dt, auto_close_ms=0):
         if state["run_started_at"] is not None:
             state["elapsed_seconds"] = max(0.0, time.perf_counter() - state["run_started_at"])
         finished = []
+        drain_started_at = time.perf_counter()
         while True:
             try:
                 done_generation, future = state["completed_future_queue"].get_nowait()
@@ -1648,8 +1790,14 @@ def show_chaos_map(duration, dt, auto_close_ms=0):
             if done_generation != generation or future not in state["futures"]:
                 continue
             finished.append(future)
+        drain_seconds = time.perf_counter() - drain_started_at
+
+        result_seconds = 0.0
+        finished_batch_cells = 0
+        finished_worker_seconds = 0.0
 
         for future in finished:
+            result_started_at = time.perf_counter()
             metadata = state["futures"].pop(future)
             batch_size = metadata["batch_size"]
             try:
@@ -1665,20 +1813,43 @@ def show_chaos_map(duration, dt, auto_close_ms=0):
 
             state["values"][rows, cols] = values
             state["completed_cells"] += batch_size
+            finished_batch_cells += batch_size
+            finished_worker_seconds += worker_seconds
             if state["task_runtime_ema"] is None:
                 state["task_runtime_ema"] = worker_seconds
             else:
                 state["task_runtime_ema"] = 0.25 * worker_seconds + 0.75 * state["task_runtime_ema"]
+            result_seconds += time.perf_counter() - result_started_at
 
+        extrema_seconds = 0.0
+        retune_seconds = 0.0
+        redraw_seconds = 0.0
         if finished:
+            extrema_started_at = time.perf_counter()
             refresh_extrema_lines()
+            extrema_seconds = time.perf_counter() - extrema_started_at
+            retune_started_at = time.perf_counter()
             retune_scheduler(params)
+            retune_seconds = time.perf_counter() - retune_started_at
             status_var.set(f"Calculating {state['completed_cells']}/{total_cells} cells")
             now = time.perf_counter()
             if now - state["last_redraw_at"] >= 0.15:
+                redraw_started_at = time.perf_counter()
                 redraw()
                 root.update_idletasks()
+                redraw_seconds = time.perf_counter() - redraw_started_at
                 state["last_redraw_at"] = now
+
+            maybe_log_diagnostic(
+                finished_batches=len(finished),
+                finished_batch_cells=finished_batch_cells,
+                finished_worker_seconds=finished_worker_seconds,
+                drain_seconds=drain_seconds,
+                result_seconds=result_seconds,
+                extrema_seconds=extrema_seconds,
+                retune_seconds=retune_seconds,
+                redraw_seconds=redraw_seconds,
+            )
 
         if state["completed_cells"] >= total_cells:
             state["running"] = False
@@ -1694,6 +1865,19 @@ def show_chaos_map(duration, dt, auto_close_ms=0):
                 status_var.set("Done")
             redraw()
             state["last_redraw_at"] = time.perf_counter()
+            maybe_log_diagnostic(
+                finished_batches=0,
+                finished_batch_cells=0,
+                finished_worker_seconds=0.0,
+                drain_seconds=drain_seconds,
+                result_seconds=result_seconds,
+                extrema_seconds=extrema_seconds,
+                retune_seconds=retune_seconds,
+                redraw_seconds=redraw_seconds,
+                force=True,
+            )
+            if state["close_on_finish_ms"] > 0:
+                root.after(state["close_on_finish_ms"], root.destroy)
             return
 
         submit_tasks(generation, params)
@@ -1772,12 +1956,15 @@ def show_chaos_map(duration, dt, auto_close_ms=0):
         state["resources"] = tuning["resources"]
         state["worker_count"] = tuning["worker_count"]
         state["cells_per_task"] = tuning["cells_per_task"]
+        state["baseline_cells_per_task"] = tuning["cells_per_task"]
+        state["minimum_cells_per_task"] = sustained_cells_per_task_floor(tuning["cells_per_task"])
         state["max_in_flight"] = tuning["max_in_flight"]
         state["poll_interval_ms"] = tuning["poll_interval_ms"]
         state["executor"] = cf.ProcessPoolExecutor(
             max_workers=state["worker_count"],
             mp_context=mp.get_context("spawn"),
         )
+        reset_diagnostic_log()
         refresh_params_text(params)
         state["save_filename"] = build_save_filename(params)
         status_var.set(f"Calculating 0/{grid * grid} cells")
@@ -1908,10 +2095,20 @@ def parse_args():
     parser.add_argument("--duration", type=float, default=10.0, help="integration time for each grid cell")
     parser.add_argument("--dt", type=float, default=0.02, help="time step")
     parser.add_argument("--auto-close-ms", type=int, default=0, help="auto close the window after N milliseconds")
+    parser.add_argument("--close-on-finish-ms", type=int, default=0, help="close the window N milliseconds after computation finishes")
+    parser.add_argument("--grid", type=int, default=180, help="initial grid size shown in the UI")
+    parser.add_argument("--diagnostic-log", type=str, default="", help="optional CSV path for scheduler diagnostics")
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     mp.freeze_support()
     args = parse_args()
-    show_chaos_map(duration=args.duration, dt=args.dt, auto_close_ms=args.auto_close_ms)
+    show_chaos_map(
+        duration=args.duration,
+        dt=args.dt,
+        auto_close_ms=args.auto_close_ms,
+        initial_grid=args.grid,
+        diagnostic_log_path=args.diagnostic_log or None,
+        close_on_finish_ms=args.close_on_finish_ms,
+    )
